@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ### 2. Iniciar o servidor
 
 ```bash
-python app.py
+python ipv6.py
 ```
 
 ### 3. Abrir no navegador
