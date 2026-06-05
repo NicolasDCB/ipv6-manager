@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPv6 Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --bg2:       #171b26;
+    --bg3:       #1e2335;
+    --border:    #2a2f45;
+    --border2:   #353c58;
+    --text:      #e2e8f0;
+    --muted:     #8892aa;
+    --accent:    #4f9cf9;
+    --accent-bg: #1a2d4a;
+    --success:   #34d399;
+    --success-bg:#0d2d20;
+    --warn:      #fbbf24;
+    --warn-bg:   #2d1f0a;
+    --danger:    #f87171;
+    --danger-bg: #2d0f0f;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Inter', sans-serif;
+    --radius:    8px;
+    --radius-lg: 12px;
+  }
+
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
+
+  /* SIDEBAR */
+  .sidebar { width: 230px; min-width: 230px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
+  .logo-title { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 9px; }
+  .logo-title svg { color: var(--accent); }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .nav-section { padding: 10px 0 4px; }
+  .nav-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; padding: 4px 18px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; color: var(--muted); border: none; background: none; width: 100%; text-align: left; border-radius: 0; transition: color .15s, background .15s; }
+  .nav-item svg { opacity: .7; flex-shrink: 0; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item:hover svg { opacity: 1; }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent); }
+  .nav-item.active svg { opacity: 1; color: var(--accent); }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 13px 22px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .topbar-bloco { font-family: var(--mono); font-size: 12px; background: var(--accent-bg); color: var(--accent); padding: 3px 11px; border-radius: var(--radius); margin-left: auto; border: 1px solid #2a4870; }
+  .btn-edit { background: var(--bg3); border: 1px solid var(--border2); color: var(--muted); padding: 4px 9px; border-radius: var(--radius); cursor: pointer; font-size: 12px; transition: all .15s; }
+  .btn-edit:hover { color: var(--text); border-color: var(--accent); }
+  .content { flex: 1; overflow-y: auto; padding: 22px; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title svg { color: var(--accent); }
+
+  /* FORM ELEMENTS */
+  .field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  input[type=text], input[type=number], select {
+    background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+    border-radius: var(--radius); padding: 8px 11px; font-family: var(--mono); font-size: 13px;
+    outline: none; transition: border-color .15s; width: 100%;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+  select { cursor: pointer; }
+  select option { background: var(--bg3); }
+
+  .btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: var(--radius); cursor: pointer; border: none; transition: all .15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* OUTPUT */
+  .output { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; font-family: var(--mono); font-size: 12.5px; line-height: 1.8; color: var(--muted); min-height: 60px; }
+  .output.ok { color: var(--text); }
+  .output.err { color: var(--danger); border-color: var(--danger-bg); }
+
+  /* STATS */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .stat-val { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); word-break: break-all; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 12.5px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+
+  /* BADGES */
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .badge-blue   { background: var(--accent-bg); color: var(--accent); border: 1px solid #2a4870; }
+  .badge-green  { background: var(--success-bg); color: var(--success); border: 1px solid #0d3d25; }
+  .badge-warn   { background: var(--warn-bg); color: var(--warn); border: 1px solid #3d2a05; }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #3d0f0f; }
+
+  /* CONCEPTS */
+  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .concept-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
+  .concept-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .concept-title svg { color: var(--accent); }
+  .concept-body { font-size: 12.5px; color: var(--muted); line-height: 1.75; }
+  .concept-body code { font-family: var(--mono); font-size: 11.5px; background: var(--bg3); padding: 1px 6px; border-radius: 4px; color: var(--accent); }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; padding: 2px 8px; border-radius: 99px; margin: 2px 1px; }
+  .tag-b { background: var(--accent-bg); color: var(--accent); }
+  .tag-g { background: var(--success-bg); color: var(--success); }
+  .tag-y { background: var(--warn-bg); color: var(--warn); }
+  .tag-r { background: var(--danger-bg); color: var(--danger); }
+  .full { grid-column: 1 / -1; }
+
+  /* ACCORDION */
+  .accordion { border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 10px; overflow: hidden; }
+  .acc-header { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: var(--bg2); user-select: none; }
+  .acc-header:hover { background: var(--bg3); }
+  .acc-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .acc-bloco { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-left: auto; margin-right: 10px; }
+  .acc-arrow { color: var(--muted); transition: transform .2s; font-size: 12px; }
+  .acc-arrow.open { transform: rotate(180deg); }
+  .acc-body { display: none; padding: 0 16px 14px; background: var(--bg3); border-top: 1px solid var(--border); }
+  .acc-body.open { display: block; }
+  .type-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .type-row:last-child { border-bottom: none; }
+  .type-name { min-width: 150px; color: var(--muted); font-family: var(--sans); }
+  .type-bloco { font-family: var(--mono); color: var(--accent); }
+  .type-any { font-family: var(--mono); color: var(--warn); font-size: 11px; margin-left: auto; }
+
+  /* PREFIX TABLE */
+  .prefix-row td:first-child { color: var(--accent); font-weight: 500; }
+  .prefix-desc { font-family: var(--sans); font-size: 12px; color: var(--muted); }
+
+  /* SPINNER */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+  @media (max-width: 700px) {
+    .sidebar { width: 52px; min-width: 52px; }
+    .nav-item span, .logo-sub, .logo-title span, .nav-label { display: none; }
+    .sidebar-logo { padding: 16px 12px; }
+    .nav-item { padding: 12px; justify-content: center; }
+    .concept-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-title">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span>IPv6 Manager</span>
+    </div>
+    <div class="logo-sub">Planejamento de redes</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Teoria</div>
+    <button class="nav-item active" onclick="nav('conceitos')" id="nav-conceitos">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Conceitos</span>
+    </button>
+    <button class="nav-item" onclick="nav('hierarquia')" id="nav-hierarquia">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="4" rx="1"/><rect x="9" y="13" width="6" height="4" rx="1"/><rect x="15" y="13" width="6" height="4" rx="1"/><path d="M6 7v3h6M6 7v3h6m6 3V10H6"/></svg>
+      <span>Hierarquia</span>
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Ferramentas</div>
+    <button class="nav-item" onclick="nav('validar')" id="nav-validar">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <span>Validar endereço</span>
+    </button>
+    <button class="nav-item" onclick="nav('subdividir')" id="nav-subdividir">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>
+      <span>Subdividir bloco</span>
+    </button>
+    <button class="nav-item" onclick="nav('alocar')" id="nav-alocar">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span>Alocação L/R</span>
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Simulação</div>
+    <button class="nav-item" onclick="nav('clientes')" id="nav-clientes">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Clientes</span>
+    </button>
+    <button class="nav-item" onclick="nav('anycast')" id="nav-anycast">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+      <span>Anycast</span>
+    </button>
+    <button class="nav-item" onclick="nav('prefixos')" id="nav-prefixos">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <span>Tabela prefixos</span>
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <svg width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    <span class="topbar-title" id="topbar-title">Conceitos Fundamentais</span>
+    <span class="topbar-bloco" id="bloco-display">2804:1f4a::/32</span>
+    <button class="btn-edit" onclick="trocarBloco()">✏ Alterar bloco</button>
+  </div>
+
+  <div class="content">
+
+    <!-- CONCEITOS -->
+    <div class="panel active" id="panel-conceitos">
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Unicast
+          </div>
+          <div class="concept-body">
+            Comunicação de <strong style="color:var(--text)">um para um</strong>. Pacote enviado a um único destinatário.<br><br>
+            <span class="tag tag-b">GUA 2000::/3</span> roteável na internet<br>
+            <span class="tag tag-g">Link-local fe80::/10</span> só no enlace<br>
+            <span class="tag tag-y">ULA fc00::/7</span> uso privado<br>
+            <span class="tag tag-r">::1/128</span> loopback
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Multicast
+          </div>
+          <div class="concept-body">
+            Comunicação de <strong style="color:var(--text)">um para muitos</strong>. Substitui o broadcast do IPv4.<br><br>
+            <span class="tag tag-b">ff00::/8</span> prefixo multicast<br>
+            <span class="tag tag-g">ff02::1</span> todos os nós<br>
+            <span class="tag tag-y">ff02::2</span> todos os roteadores<br>
+            <span class="tag tag-r">ff02::fb</span> mDNS
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            Anycast
+          </div>
+          <div class="concept-body">
+            Comunicação de <strong style="color:var(--text)">um para o mais próximo</strong>. Mesmo endereço em vários nós; entrega ao topologicamente mais próximo.<br><br>
+            Usado em DNS raiz, CDNs e alta disponibilidade. Usa o espaço de endereços unicast.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="4" rx="1"/><rect x="9" y="13" width="6" height="4" rx="1"/><rect x="15" y="13" width="6" height="4" rx="1"/><path d="M6 7v3h6M6 7v3h6m6 3V10H6"/></svg>
+            Hierarquia ISP
+          </div>
+          <div class="concept-body">
+            <code>/32</code> bloco do provedor (LACNIC)<br>
+            <code>/48</code> localidade ou cliente corporativo<br>
+            <code>/56</code> tipo de serviço ou departamento<br>
+            <code>/64</code> sub-rede de enlace (RFC 7421)<br><br>
+            Hosts por /64: 2⁶⁴ ≈ 18,4 quintilhões
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+            Leftmost
+          </div>
+          <div class="concept-body">
+            Aloca sub-redes do <strong style="color:var(--text)">início</strong> do bloco para o fim. Simples, previsível e fácil de auditar.<br><br>
+            <code>2804:1f4a::/48</code> ← sub 1<br>
+            <code>2804:1f4a:1::/48</code> ← sub 2<br>
+            <code>2804:1f4a:2::/48</code> ← sub 3
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="19 12 21 12 12 21 3 12 5 12"/><path d="M19 12V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v7"/></svg>
+            Rightmost
+          </div>
+          <div class="concept-body">
+            Aloca do <strong style="color:var(--text)">fim</strong> do bloco para o início. Reserva o início para crescimento e infraestrutura.<br><br>
+            <code>2804:1f4a:ffff::/48</code><br>
+            <code>2804:1f4a:fffe::/48</code><br>
+            <code>2804:1f4a:fffd::/48</code>
+          </div>
+        </div>
+        <div class="concept-card full">
+          <div class="concept-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            Regras de Abreviação
+          </div>
+          <div class="concept-body">
+            <strong style="color:var(--text)">Regra 1:</strong> remover zeros à esquerda em cada grupo de 16 bits.<br>
+            <code>2804:1f4a:0000:0001::</code> → <code>2804:1f4a:0:1::</code><br><br>
+            <strong style="color:var(--text)">Regra 2:</strong> substituir a maior sequência contígua de grupos <code>0000</code> por <code>::</code> (apenas uma vez por endereço).<br>
+            <code>2001:0db8:0000:0000:0000:0000:0000:0001</code> → <code>2001:db8::1</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIERARQUIA -->
+    <div class="panel" id="panel-hierarquia">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="4" rx="1"/><rect x="9" y="13" width="6" height="4" rx="1"/><rect x="15" y="13" width="6" height="4" rx="1"/><path d="M6 7v3h6M6 7v3h6m6 3V10H6"/></svg>
+          Plano hierárquico — <span id="hier-bloco"></span>
+        </div>
+        <div id="hier-content"><div class="output">Carregando...</div></div>
+      </div>
+    </div>
+
+    <!-- VALIDAR -->
+    <div class="panel" id="panel-validar">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Validador de endereço IPv6
+        </div>
+        <div class="field-row">
+          <div class="field" style="flex:4">
+            <label>Endereço IPv6 (com ou sem prefixo)</label>
+            <input type="text" id="val-input" placeholder="2804:1f4a::1  ou  2804:1f4a::/48" onkeydown="if(event.key==='Enter')validar()">
+          </div>
+          <button class="btn btn-primary" onclick="validar()">Validar</button>
+        </div>
+        <div id="val-output" class="output">Digite um endereço acima e pressione Validar.</div>
+        <div id="val-stats" class="stat-grid" style="display:none;margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- SUBDIVIDIR -->
+    <div class="panel" id="panel-subdividir">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>
+          Subdivisão de bloco IPv6
+        </div>
+        <div class="field-row">
+          <div class="field" style="flex:3">
+            <label>Bloco base</label>
+            <input type="text" id="sub-bloco" placeholder="2804:1f4a::/32">
+          </div>
+          <div class="field" style="min-width:110px;flex:1">
+            <label>Novo prefixo</label>
+            <input type="number" id="sub-pfx" placeholder="48" min="1" max="128">
+          </div>
+          <div class="field" style="min-width:110px;flex:1">
+            <label>Máx. exibir</label>
+            <input type="number" id="sub-max" value="32" min="1" max="256">
+          </div>
+          <button class="btn btn-primary" onclick="subdividir()">Dividir</button>
+        </div>
+        <div id="sub-stats" class="stat-grid" style="display:none"></div>
+        <div id="sub-output"></div>
+      </div>
+    </div>
+
+    <!-- ALOCAR -->
+    <div class="panel" id="panel-alocar">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Algoritmos de Alocação — Leftmost / Rightmost
+        </div>
+        <div class="field-row">
+          <div class="field" style="flex:3">
+            <label>Bloco base</label>
+            <input type="text" id="aloc-bloco" placeholder="2804:1f4a::/32">
+          </div>
+          <div class="field" style="min-width:110px;flex:1">
+            <label>Prefixo alvo</label>
+            <input type="number" id="aloc-pfx" placeholder="48" min="1" max="128">
+          </div>
+          <div class="field" style="min-width:100px;flex:1">
+            <label>Quantidade</label>
+            <input type="number" id="aloc-qty" value="5" min="1" max="256">
+          </div>
+          <div class="field" style="min-width:140px;flex:1">
+            <label>Algoritmo</label>
+            <select id="aloc-algo">
+              <option value="left">Leftmost</option>
+              <option value="right">Rightmost</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="alocar()">Alocar</button>
+        </div>
+        <div id="aloc-output"></div>
+      </div>
+    </div>
+
+    <!-- CLIENTES -->
+    <div class="panel" id="panel-clientes">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Simulação de Alocação de Clientes
+        </div>
+        <div class="field-row">
+          <div class="field" style="max-width:200px">
+            <label>Clientes por localidade</label>
+            <input type="number" id="cli-qty" value="5" min="1" max="50">
+          </div>
+          <button class="btn btn-primary" onclick="clientes()">Simular</button>
+        </div>
+        <div id="cli-output"></div>
+      </div>
+    </div>
+
+    <!-- ANYCAST -->
+    <div class="panel" id="panel-anycast">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          Endereços Anycast Reservados
+        </div>
+        <div id="any-output"><div class="output">Carregando...</div></div>
+      </div>
+    </div>
+
+    <!-- PREFIXOS -->
+    <div class="panel" id="panel-prefixos">
+      <div class="card">
+        <div class="card-title">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          Tabela de Prefixos IPv6 de Referência
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Prefixo</th><th>Uso típico</th><th>Sub-redes /64</th><th>Endereços no bloco</th></tr></thead>
+            <tbody id="prefix-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  let BLOCO = "2804:1f4a::/32";
+  const TITLES = {
+    conceitos:"Conceitos Fundamentais", hierarquia:"Plano Hierárquico",
+    validar:"Validar Endereço", subdividir:"Subdividir Bloco",
+    alocar:"Alocação L/R", clientes:"Simulação de Clientes",
+    anycast:"Endereços Anycast", prefixos:"Tabela de Prefixos"
+  };
+
+  async function api(endpoint, body) {
+    const r = await fetch("/api/" + endpoint, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  function nav(id) {
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.getElementById("nav-" + id).classList.add("active");
+    document.getElementById("panel-" + id).classList.add("active");
+    document.getElementById("topbar-title").textContent = TITLES[id] || id;
+    if (id === "hierarquia") loadHierarquia();
+    if (id === "anycast") loadAnycast();
+    if (id === "prefixos") loadPrefixos();
+  }
+
+  function trocarBloco() {
+    const novo = prompt("Informe o bloco /32 principal:", BLOCO);
+    if (!novo) return;
+    BLOCO = novo.trim();
+    document.getElementById("bloco-display").textContent = BLOCO;
+    document.getElementById("hier-bloco").textContent = BLOCO;
+  }
+
+  // ── VALIDAR
+  async function validar() {
+    const entrada = document.getElementById("val-input").value.trim();
+    const out = document.getElementById("val-output");
+    const stats = document.getElementById("val-stats");
+    if (!entrada) return;
+    out.className = "output"; out.textContent = "Validando...";
+    stats.style.display = "none";
+
+    const d = await api("validar", {endereco: entrada});
+    if (!d.ok) {
+      out.className = "output err"; out.textContent = "✘ Inválido: " + d.erro; return;
+    }
+    out.className = "output ok"; out.textContent = "✔ Endereço válido";
+    if (d.tipo === "bloco") {
+      stats.style.display = "grid";
+      stats.innerHTML = `
+        <div class="stat"><div class="stat-label">Endereço de rede</div><div class="stat-val">${d.rede}</div></div>
+        <div class="stat"><div class="stat-label">Forma expandida</div><div class="stat-val" style="font-size:11px">${d.expandido}</div></div>
+        <div class="stat"><div class="stat-label">Tamanho do bloco</div><div class="stat-val">${d.tamanho}</div></div>
+        <div class="stat"><div class="stat-label">Sub-redes /64</div><div class="stat-val">${d.subredes64}</div></div>
+      `;
+    } else {
+      stats.style.display = "grid";
+      stats.innerHTML = `
+        <div class="stat"><div class="stat-label">Forma expandida</div><div class="stat-val" style="font-size:11px">${d.expandido}</div></div>
+        <div class="stat"><div class="stat-label">Forma abreviada</div><div class="stat-val">${d.abreviado}</div></div>
+      `;
+    }
+  }
+
+  // ── SUBDIVIDIR
+  async function subdividir() {
+    const bloco  = document.getElementById("sub-bloco").value.trim() || BLOCO;
+    const pfx    = document.getElementById("sub-pfx").value;
+    const maxEx  = document.getElementById("sub-max").value;
+    const stats  = document.getElementById("sub-stats");
+    const out    = document.getElementById("sub-output");
+
+    stats.style.display = "none"; out.innerHTML = "<div class='output'>Calculando...</div>";
+    const d = await api("subdividir", {bloco, novo_prefixo: pfx, max_exibir: maxEx});
+    if (!d.ok) { out.innerHTML = `<div class='output err'>✘ ${d.erro}</div>`; return; }
+
+    stats.style.display = "grid";
+    stats.innerHTML = `
+      <div class="stat"><div class="stat-label">Bloco original</div><div class="stat-val">${d.bloco_original}</div></div>
+      <div class="stat"><div class="stat-label">Total de sub-redes</div><div class="stat-val">${d.total.toLocaleString()}</div></div>
+      <div class="stat"><div class="stat-label">Exibindo</div><div class="stat-val">${d.exibindo}</div></div>
+    `;
+
+    let rows = d.subredes.map((s,i) =>
+      `<tr><td style="color:var(--muted)">${i+1}</td><td>${s}</td><td><span class="badge badge-blue">/${pfx}</span></td></tr>`
+    ).join("");
+    out.innerHTML = `<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>#</th><th>Endereço de rede</th><th>Prefixo</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // ── ALOCAR
+  async function alocar() {
+    const bloco = document.getElementById("aloc-bloco").value.trim() || BLOCO;
+    const pfx   = document.getElementById("aloc-pfx").value;
+    const qty   = document.getElementById("aloc-qty").value;
+    const algo  = document.getElementById("aloc-algo").value;
+    const out   = document.getElementById("aloc-output");
+
+    out.innerHTML = "<div class='output'>Calculando...</div>";
+    const d = await api("alocar", {bloco, prefixo_alvo: pfx, quantidade: qty, algoritmo: algo});
+    if (!d.ok) { out.innerHTML = `<div class='output err'>✘ ${d.erro}</div>`; return; }
+
+    const badge = algo === "left"
+      ? `<span class="badge badge-blue">Leftmost</span>`
+      : `<span class="badge badge-green">Rightmost</span>`;
+
+    let rows = d.redes.map((r,i) =>
+      `<tr><td style="color:var(--muted)">${i+1}</td><td>${r}</td><td>${badge}</td></tr>`
+    ).join("");
+    out.innerHTML = `<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>#</th><th>Sub-rede</th><th>Algoritmo</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // ── HIERARQUIA
+  async function loadHierarquia() {
+    document.getElementById("hier-bloco").textContent = BLOCO;
+    document.getElementById("hier-content").innerHTML = "<div class='output'>Gerando plano...</div>";
+    const d = await api("hierarquia", {bloco: BLOCO});
+    if (!d.ok) { document.getElementById("hier-content").innerHTML = `<div class='output err'>✘ ${d.erro}</div>`; return; }
+
+    const html = d.plano.localidades.map(loc => `
+      <div class="accordion">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <svg width="14" height="14" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="acc-name">${loc.nome} <span style="color:var(--muted);font-weight:400">(${loc.sigla})</span></span>
+          <span class="acc-bloco">${loc.bloco48}</span>
+          <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+          ${loc.redes.map(r => `
+            <div class="type-row">
+              <span class="type-name">${r.tipo}</span>
+              <span class="type-bloco">${r.bloco56}</span>
+              ${r.codigo === "any" ? `<span class="type-any">★ ${r.anycast_reservado}</span>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `).join("");
+    document.getElementById("hier-content").innerHTML = html;
+  }
+
+  function toggleAcc(el) {
+    el.nextElementSibling.classList.toggle("open");
+    el.querySelector(".acc-arrow").classList.toggle("open");
+  }
+
+  // ── CLIENTES
+  async function clientes() {
+    const qty = document.getElementById("cli-qty").value;
+    document.getElementById("cli-output").innerHTML = "<div class='output'>Simulando...</div>";
+    const d = await api("clientes", {bloco: BLOCO, quantidade: qty});
+    if (!d.ok) { document.getElementById("cli-output").innerHTML = `<div class='output err'>✘ ${d.erro}</div>`; return; }
+
+    let html = "";
+    d.localidades.forEach(loc => {
+      let rows = loc.clientes.map((c,i) =>
+        `<tr><td style="color:var(--muted)">Cliente ${i+1}</td><td>${c}</td></tr>`
+      ).join("");
+      html += `
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px">
+            ${loc.localidade} (${loc.sigla}) — <span style="color:var(--accent)">${loc.bloco_res}</span>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Bloco /64 alocado</th></tr></thead><tbody>${rows}</tbody></table></div>
+        </div>`;
+    });
+    document.getElementById("cli-output").innerHTML = html;
+  }
+
+  // ── ANYCAST
+  async function loadAnycast() {
+    document.getElementById("any-output").innerHTML = "<div class='output'>Carregando...</div>";
+    const d = await api("anycast", {bloco: BLOCO});
+    if (!d.ok) { document.getElementById("any-output").innerHTML = `<div class='output err'>✘ ${d.erro}</div>`; return; }
+
+    let rows = d.anycast.map(a => `
+      <tr>
+        <td>${a.localidade} <span style="color:var(--muted)">(${a.sigla})</span></td>
+        <td>${a.bloco56}</td>
+        <td style="color:var(--warn)">${a.anycast}</td>
+      </tr>
+    `).join("");
+    document.getElementById("any-output").innerHTML = `
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">O último /64 de cada bloco /56 Anycast é reservado como endereço anycast da localidade.</p>
+      <div class="table-wrap"><table><thead><tr><th>Localidade</th><th>Bloco Anycast /56</th><th>Endereço reservado</th></tr></thead><tbody>${rows}</tbody></table></div>
+    `;
+  }
+
+  // ── PREFIXOS
+  function loadPrefixos() {
+    const dados = [
+      {pfx:"/32",  bits:32,  uso:"Bloco do provedor (ISP). Atribuído pelo LACNIC/RIR."},
+      {pfx:"/48",  bits:48,  uso:"Bloco por localidade ou cliente corporativo."},
+      {pfx:"/56",  bits:56,  uso:"Bloco por tipo de serviço ou departamento."},
+      {pfx:"/64",  bits:64,  uso:"Sub-rede de enlace — mínimo recomendado (RFC 7421)."},
+      {pfx:"/128", bits:128, uso:"Endereço de host único (loopback, anycast)."},
+    ];
+    const rows = dados.map(d => {
+      const s64 = d.bits <= 64 ? Math.pow(2, 64 - d.bits).toLocaleString() : "—";
+      return `<tr class="prefix-row">
+        <td><span class="badge badge-blue">${d.pfx}</span></td>
+        <td class="prefix-desc">${d.uso}</td>
+        <td>${s64}</td>
+        <td>2<sup>${128-d.bits}</sup></td>
+      </tr>`;
+    }).join("");
+    document.getElementById("prefix-tbody").innerHTML = rows;
+  }
+
+  // inicializa
+  loadPrefixos();
+  document.getElementById("hier-bloco").textContent = BLOCO;
+</script>
+</body>
+</html>
